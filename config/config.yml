@@ -1,0 +1,49 @@
+exporters:
+  otlp/int:
+    endpoint: "api.honeycomb.io:443"
+    headers:
+      "x-honeycomb-team": ${HONEYCOMB_INTERNAL_APIKEY}
+  otlp/local:
+    endpoint: "api.honeycomb.io:443"
+    headers:
+      "x-honeycomb-team": ${HONEYCOMB_APIKEY}
+  logging:
+    loglevel: debug
+extensions:
+  health_check: {}
+  memory_ballast: {}
+processors:
+  batch: {}
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 3276
+    spike_limit_mib: 1024
+receivers:
+  otlp/int:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+  otlp/local:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4318
+service:
+  extensions:
+  - health_check
+  - memory_ballast
+  pipelines: 
+    # INT environment telemetry
+    traces/int:
+      receivers: [otlp/int]        
+      processors: [memory_limiter, batch]
+      exporters: [otlp/int]
+    # local dev machine telemetry
+    traces/local:
+      receivers: [otlp/local]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/local]
+  telemetry:
+    logs:
+      level: debug
+    metrics:
+      address: 0.0.0.0:8888
